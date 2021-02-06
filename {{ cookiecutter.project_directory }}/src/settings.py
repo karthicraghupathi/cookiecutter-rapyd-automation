@@ -7,17 +7,22 @@ from logging.config import dictConfig
 from dotenv import load_dotenv, find_dotenv
 
 
-# load environment variabels from the .env file
+# Load environment variables from the .env file
 load_dotenv(find_dotenv())
 
-# setup some default variables
+# Setup default variables
 PROJECT_NAME = "{{ cookiecutter.project_name }}"
 
-# setup logging
+
+# Logging setup
+
+# Add new TRACE logging level
 logging.TRACE = 5
 logging.addLevelName(logging.TRACE, "TRACE")
 logging.Logger.trace = partialmethod(logging.Logger.log, logging.TRACE)
 logging.trace = partial(logging.log, logging.TRACE)
+
+# Configure logging
 dictConfig(
     {
         "version": 1,
@@ -38,6 +43,7 @@ dictConfig(
 logger = logging.getLogger("{{ cookiecutter.project_slug }}")
 
 
+# Define the exception handler for unhandled exceptions
 def handle_exception(exctype, value, traceback):
     """Sends unhandled exceptions to logging mechanism."""
     # ignore KeyboardInterrupt so a console python program can exit with ctrl + c
@@ -48,5 +54,5 @@ def handle_exception(exctype, value, traceback):
     logger.critical("Uncaught exception", exc_info=(exctype, value, traceback))
 
 
-# hook up the exception handler
+# Hook up the exception handler
 sys.excepthook = handle_exception
