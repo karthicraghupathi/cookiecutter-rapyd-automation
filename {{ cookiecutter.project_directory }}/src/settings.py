@@ -1,14 +1,23 @@
 import logging
-import socket
+import os
 import sys
 from functools import partial, partialmethod
 from logging.config import dictConfig
 
+from dotenv import load_dotenv, find_dotenv
+
+
+# load environment variabels from the .env file
+load_dotenv(find_dotenv())
+
 # setup some default variables
 PROJECT_NAME = "{{ cookiecutter.project_name }}"
-HOSTNAME = socket.gethostname().replace("-", "_").lower().split(".")[0]
 
 # setup logging
+logging.TRACE = 5
+logging.addLevelName(logging.TRACE, "TRACE")
+logging.Logger.trace = partialmethod(logging.Logger.log, logging.TRACE)
+logging.trace = partial(logging.log, logging.TRACE)
 dictConfig(
     {
         "version": 1,
@@ -19,17 +28,13 @@ dictConfig(
         "handlers": {
             "console": {
                 "formatter": "simple",
-                "level": "INFO",
+                "level": os.environ.get("LOG_LEVEL", "INFO"),
                 "class": "logging.StreamHandler",
             }
         },
-        "loggers": {"": {"handlers": ["console"], "level": "DEBUG"}},
+        "loggers": {"": {"handlers": ["console"], "level": "TRACE"}},
     }
 )
-logging.TRACE = 5
-logging.addLevelName(logging.TRACE, "TRACE")
-logging.Logger.trace = partialmethod(logging.Logger.log, logging.TRACE)
-logging.trace = partial(logging.log, logging.TRACE)
 logger = logging.getLogger("{{ cookiecutter.project_slug }}")
 
 
