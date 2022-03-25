@@ -1,26 +1,26 @@
 import logging
 import os
 import sys
-from functools import partial, partialmethod
 from logging.config import dictConfig
 
 from dotenv import load_dotenv, find_dotenv
 
 
 # Load environment variables from the .env file
-load_dotenv(find_dotenv())
+try:
+    load_dotenv(find_dotenv(raise_error_if_not_found=True))
+except OSError:
+    raise FileNotFoundError(
+        "Could not find an .env file. Did you create one?"
+    ) from None
+
 
 # Setup default variables
 PROJECT_NAME = "{{ cookiecutter.project_name }}"
+PROJECT_SLUG = "{{ cookiecutter.project_slug }}"
 
 
 # Logging setup
-
-# Add new TRACE logging level
-logging.TRACE = 5
-logging.addLevelName(logging.TRACE, "TRACE")
-logging.Logger.trace = partialmethod(logging.Logger.log, logging.TRACE)
-logging.trace = partial(logging.log, logging.TRACE)
 
 # Configure logging
 dictConfig(
@@ -37,10 +37,10 @@ dictConfig(
                 "class": "logging.StreamHandler",
             }
         },
-        "loggers": {"": {"handlers": ["console"], "level": "TRACE"}},
+        "loggers": {"": {"handlers": ["console"], "level": "INFO"}},
     }
 )
-logger = logging.getLogger("{{ cookiecutter.project_slug }}")
+logger = logging.getLogger("{}.{}".format(PROJECT_SLUG, __name__))
 
 
 # Define the exception handler for unhandled exceptions
