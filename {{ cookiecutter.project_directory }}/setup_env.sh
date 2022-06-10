@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-echo LOG_LEVEL=$LOG_LEVEL >> .env
+echo 'LOG_LEVEL="INFO"' >> .env

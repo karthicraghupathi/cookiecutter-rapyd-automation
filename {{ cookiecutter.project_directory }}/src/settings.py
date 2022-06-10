@@ -3,8 +3,7 @@ import os
 import sys
 from logging.config import dictConfig
 
-from dotenv import load_dotenv, find_dotenv
-
+from dotenv import find_dotenv, load_dotenv
 
 # Load environment variables from the .env file
 try:

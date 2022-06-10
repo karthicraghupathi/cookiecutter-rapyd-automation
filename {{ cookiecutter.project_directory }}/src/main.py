@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import settings
 from settings import logger
 
