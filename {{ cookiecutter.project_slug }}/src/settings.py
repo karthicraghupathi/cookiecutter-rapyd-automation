@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 from logging.config import dictConfig
+from pathlib import Path
 
 from dotenv import find_dotenv, load_dotenv
 
@@ -17,26 +18,56 @@ except OSError:
 # Setup default variables
 PROJECT_NAME = "{{ cookiecutter.project_name }}"
 PROJECT_SLUG = "{{ cookiecutter.project_slug }}"
+PROJECT_DIR = Path(__file__).parent.parent.resolve()
 
 
 # Logging setup
+
+# Setup logging filters
+class ExcludeErrorFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return record.levelno < logging.ERROR
+
 
 # Configure logging
 dictConfig(
     {
         "version": 1,
         "disable_existing_loggers": False,
+        "filters": {"exclude_error": {"()": ExcludeErrorFilter}},
         "formatters": {
             "simple": {"format": "%(asctime)s %(levelname)-8s %(name)s %(message)s"}
         },
         "handlers": {
-            "console": {
+            "console_stdout": {
                 "formatter": "simple",
                 "level": os.environ.get("LOG_LEVEL", "INFO"),
                 "class": "logging.StreamHandler",
+                "stream": sys.stdout,
+                "filters": ["exclude_error"],
+            },
+            "console_stderr": {
+                "formatter": "simple",
+                "level": "ERROR",
+                "class": "logging.StreamHandler",
+                "stream": sys.stderr,
+            },
+            "file": {
+                "formatter": "simple",
+                "level": os.environ.get("LOG_LEVEL", "INFO"),
+                "class": "logging.handlers.RotatingFileHandler",
+                "filename": PROJECT_DIR / "logs" / f"{PROJECT_SLUG}.log",
+                "maxBytes": 1048576,
+                "backupCount": 5,
+                "delay": True,
+            },
+        },
+        "loggers": {
+            "": {
+                "handlers": ["console_stdout", "console_stderr", "file"],
+                "level": "DEBUG",
             }
         },
-        "loggers": {"": {"handlers": ["console"], "level": "INFO"}},
     }
 )
 logger = logging.getLogger("{}.{}".format(PROJECT_SLUG, __name__))

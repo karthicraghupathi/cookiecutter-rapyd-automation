@@ -3,7 +3,6 @@ def test_bake_project(cookies):
         extra_context={
             "project_name": "Python Boilerplate",
             "project_slug": "python_boilerplate",
-            "project_directory": "python_boilerplate_project",
             "project_description": "Python Boilerplate contains all the\
                  boilerplate you need to create a Python package.",
         }
@@ -12,5 +11,5 @@ def test_bake_project(cookies):
     assert result.exit_code == 0
     assert result.exception is None
 
-    assert result.project_path.name == "python_boilerplate_project"
+    assert result.project_path.name == "python_boilerplate"
     assert result.project_path.is_dir()
