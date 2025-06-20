@@ -1,1 +1,20 @@
-../.flake8
+[flake8]
+max-line-length = 88
+max-complexity = 10
+ignore =
+    E203,
+    E501,
+    E701,
+    F401,
+    F403,
+    W503
+exclude =
+    .git,
+    .hg,
+    .mypy_cache,
+    .tox,
+    .venv,
+    _build,
+    buck-out,
+    build,
+    dist
