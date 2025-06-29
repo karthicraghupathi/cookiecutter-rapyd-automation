@@ -4,15 +4,10 @@ import sys
 from logging.config import dictConfig
 from pathlib import Path
 
-from dotenv import find_dotenv, load_dotenv
+from environs import env
 
 # Load environment variables from the .env file
-try:
-    load_dotenv(find_dotenv(raise_error_if_not_found=True))
-except OSError:
-    raise FileNotFoundError(
-        "Could not find an .env file. Did you create one?"
-    ) from None
+env.read_env()
 
 
 # Setup default variables
@@ -22,6 +17,7 @@ PROJECT_DIR = Path(__file__).parent.parent.resolve()
 
 
 # Logging setup
+
 
 # Setup logging filters
 class ExcludeErrorFilter(logging.Filter):
@@ -52,19 +48,10 @@ dictConfig(
                 "class": "logging.StreamHandler",
                 "stream": sys.stderr,
             },
-            "file": {
-                "formatter": "simple",
-                "level": os.environ.get("LOG_LEVEL", "INFO"),
-                "class": "logging.handlers.RotatingFileHandler",
-                "filename": PROJECT_DIR / "logs" / f"{PROJECT_SLUG}.log",
-                "maxBytes": 1048576,
-                "backupCount": 5,
-                "delay": True,
-            },
         },
         "loggers": {
             "": {
-                "handlers": ["console_stdout", "console_stderr", "file"],
+                "handlers": ["console_stdout", "console_stderr"],
                 "level": "DEBUG",
             }
         },

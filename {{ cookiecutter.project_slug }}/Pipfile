@@ -4,11 +4,10 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-python-dotenv = { extras=["cli"], version="*" }
+environs = "*"
 
 [dev-packages]
 pre-commit = "*"
-rope = "*"
 
 [requires]
-python_version = "3.6"
+python_version = "{{ cookiecutter.python_version }}"
