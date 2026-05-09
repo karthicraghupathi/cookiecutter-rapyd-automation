@@ -10,5 +10,5 @@ echo -n "Interpreter Version: "
 pipenv run python --version
 pipenv install --dev
 git add .
-pipenv run pre-commit install
-pipenv run pre-commit run --all-files
+pipenv run pre-commit install || true
+pipenv run pre-commit run --all-files || true

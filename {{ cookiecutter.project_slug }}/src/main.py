@@ -9,5 +9,5 @@ def main():
 
 
 if __name__ == "__main__":
-    logger.info("Running {}".format(settings.PROJECT_NAME))
+    logger.info(f"Running {settings.PROJECT_NAME}")
     main()

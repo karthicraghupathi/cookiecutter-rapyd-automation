@@ -57,7 +57,7 @@ dictConfig(
         },
     }
 )
-logger = logging.getLogger("{}.{}".format(PROJECT_SLUG, __name__))
+logger = logging.getLogger(f"{PROJECT_SLUG}.{__name__}")
 
 
 # Define the exception handler for unhandled exceptions
