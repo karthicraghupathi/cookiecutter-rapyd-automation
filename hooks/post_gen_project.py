@@ -39,12 +39,12 @@ def require_command(cmd: str, install_hint: str) -> None:
 def render_license() -> None:
     """Render LICENSE from the chosen license template.
 
-    Cookiecutter copies the entire `hooks/` directory (including subdirectories)
-    to a temp location and runs the hook from there. So
-    `Path(__file__).parent / "licenses"` resolves correctly inside that
-    temp location.
+    License templates ship inside the rendered project at `.licenses/`
+    (marked `_copy_without_render` in cookiecutter.json so Jinja skips them).
+    The hook reads the chosen template, renders it, writes LICENSE, then
+    removes the `.licenses/` staging directory.
     """
-    licenses_dir = Path(__file__).resolve().parent / "licenses"
+    licenses_dir = PROJECT_DIR / ".licenses"
     license_file = licenses_dir / f"{LICENSE_CHOICE}.txt"
 
     if not license_file.exists():
@@ -56,6 +56,7 @@ def render_license() -> None:
         current_year=datetime.now().year,
     )
     (PROJECT_DIR / "LICENSE").write_text(rendered, encoding="utf-8")
+    shutil.rmtree(licenses_dir)
     info(f"Wrote LICENSE ({LICENSE_CHOICE})")
 
 

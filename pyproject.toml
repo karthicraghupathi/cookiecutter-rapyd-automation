@@ -30,5 +30,8 @@ select = ["E", "F", "W", "I", "B", "UP"]
 ignore = ["E501"]
 
 [tool.pytest.ini_options]
-testpaths = ["."]
+testpaths = ["test_cookiecutter.py"]
 python_files = ["test_*.py"]
+# Don't recurse into the cookiecutter template directory; its tests/ contains
+# Jinja syntax that pytest can't import.
+norecursedirs = ["{{*"]

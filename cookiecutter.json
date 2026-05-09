@@ -5,5 +5,6 @@
     "project_description": "A Python automation project.",
     "author_name": "Your Name",
     "author_email": "you@example.com",
-    "license": ["MIT", "Apache-2.0", "BSD-3-Clause", "Proprietary"]
+    "license": ["MIT", "Apache-2.0", "BSD-3-Clause", "Proprietary"],
+    "_copy_without_render": [".licenses/*"]
 }
