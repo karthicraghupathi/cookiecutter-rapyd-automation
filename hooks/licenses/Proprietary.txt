@@ -1,0 +1,7 @@
+Copyright (c) {current_year} {author_name}
+
+All rights reserved.
+
+This software is proprietary and confidential. Unauthorized copying of this
+file, via any medium, is strictly prohibited without the express written
+permission of the copyright holder.
