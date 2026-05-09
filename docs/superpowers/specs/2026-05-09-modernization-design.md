@@ -17,9 +17,10 @@ Two perspectives drive the work:
 
 In scope:
 
-- Replace pipenv with uv (single source of truth: `pyproject.toml`).
-- Replace black + isort + flake8 with ruff (lint + format).
-- Fix two bugs in the current template (see "Bugs Fixed" below).
+- Replace pipenv with uv (single source of truth: `pyproject.toml`) — both generated projects **and** the template repo's own dev environment.
+- Replace black + isort + flake8 with ruff (lint + format) on both sides.
+- Remove the symlink coupling between root and generated `.pre-commit-config.yaml`; replace with two independent files.
+- Fix bugs in the current template (see "Bugs Fixed" below).
 - Port the post-generation hook from bash to Python (cross-platform).
 - Add proper test coverage for the template itself.
 - Add `AGENTS.md` to both the template repo and generated projects.
@@ -38,7 +39,7 @@ Out of scope:
 
 | # | Bug | Fix |
 |---|-----|-----|
-| 1 | Generated project's post-gen hook calls `pre-commit install` and `pre-commit run --all-files`, but the template ships no `.pre-commit-config.yaml`. | Template ships `.pre-commit-config.yaml` (with ruff hooks). |
+| 1 | Generated project's `.pre-commit-config.yaml` is a **symlink** to the root one. Cookiecutter follows symlinks at render time, so generated projects silently inherit whatever maintainer state happens to be at the root — and any maintainer-only hook leaks into end-user projects. | Remove symlink. Ship a real, independent `.pre-commit-config.yaml` inside `{{ cookiecutter.project_slug }}/`. Maintainer's root config evolves separately. |
 | 2 | `setup_env.sh` is dead — never invoked, leaves users with no `.env`, no `.env.example`. | Replace with `.env.example` documenting `LOG_LEVEL`; post-gen hook copies it to `.env` if missing. |
 | 3 | `migrations/` exclusion in pre-commit (Django carryover). | Removed. |
 | 4 | Bash-only post-gen hook excludes Windows users. | Ported to Python (cross-platform `subprocess`). |
@@ -68,16 +69,27 @@ No end-user behavior change. Adds maintainer-facing infrastructure.
 
 ### M2 — Modernization
 
-End-user-visible changes.
+End-user-visible changes **and** matching maintainer-side modernization.
+
+**Generated project:**
 
 - Replace pipenv → uv.
 - Replace black/isort/flake8 → ruff.
 - Port post-gen hook from bash to Python.
-- Generated project: ship `.pre-commit-config.yaml`, `.env.example`, `Makefile`, `AGENTS.md`, `tests/` directory.
-- Generated project: convert to `src/<slug>/` package layout.
+- Ship `.pre-commit-config.yaml` (independent file, not a symlink), `.env.example`, `Makefile`, `AGENTS.md`, `tests/` directory.
+- Convert to `src/<slug>/` package layout.
 - Cookiecutter prompts: add `author_name`, `author_email`, `license`; convert `python_version` to a choice list.
 - Trim `.gitignore` to focused Python content.
-- Update template-level tests to assert generated project passes `ruff check` and `pytest`.
+
+**Template repo (root):**
+
+- Replace pipenv → uv. Delete `Pipfile`, `Pipfile.lock`, root `requirements.txt`, root `requirements-dev.txt`, root `.flake8`.
+- Rewrite root `pyproject.toml` with `[project]` + `[dependency-groups].dev` + `[tool.ruff]` + `[tool.pytest.ini_options]`.
+- Add committed `uv.lock`.
+- Replace black/isort/flake8 → ruff in root `.pre-commit-config.yaml`.
+- Remove the symlink at `{{ cookiecutter.project_slug }}/.pre-commit-config.yaml`.
+- No `uv-export` hooks at root (uv.lock is sufficient for a maintainer).
+- Update `test_cookiecutter.py` to assert generated project passes `ruff check` and `pytest`.
 
 ## Cookiecutter Inputs (`cookiecutter.json`)
 
@@ -331,6 +343,115 @@ LOG_LEVEL=INFO
 
 End users `cp .env.example .env` and edit. The post-gen hook does this copy on first generation; subsequent edits are the user's responsibility.
 
+## Maintainer-Side (Root) Modernization
+
+The template repo's own dev environment migrates in lockstep with the generated tree. Both sides become uv + ruff. The two `.pre-commit-config.yaml` files are intentionally independent — they have different audiences and will evolve differently.
+
+### Root file tree (after M2)
+
+```
+cookiecutter-rapyd-automation/
+├── .gitignore                           # focused, ~30 lines
+├── .pre-commit-config.yaml              # ruff hooks + uv-lock; NO uv-export
+├── AGENTS.md                            # (already in scope from earlier)
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── LICENSE
+├── README.md
+├── cookiecutter.json
+├── docs/superpowers/specs/...
+├── hooks/
+│   ├── post_gen_project.py              # ported from .sh
+│   └── licenses/                        # one .txt per license choice
+├── pyproject.toml                       # [project] + [dependency-groups].dev + [tool.ruff] + [tool.pytest.ini_options]
+├── test_cookiecutter.py
+├── uv.lock
+└── {{ cookiecutter.project_slug }}/
+    └── ... (generated tree as specced above)
+```
+
+Removed compared to current root: `Pipfile`, `Pipfile.lock`, `requirements.txt`, `requirements-dev.txt`, `.flake8`, the symlink at `{{ cookiecutter.project_slug }}/.pre-commit-config.yaml`.
+
+### Root `pyproject.toml` (sketch)
+
+```toml
+[project]
+name = "cookiecutter-rapyd-automation"
+version = "1.0.0"
+description = "Cookiecutter template for a Python automation project."
+requires-python = ">=3.10"
+authors = [{name = "Karthic Raghupathi"}]
+dependencies = []
+
+[dependency-groups]
+dev = ["cookiecutter", "pytest", "pytest-cookies", "ruff", "pre-commit"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+python_files = ["test_*.py"]
+```
+
+The root has no runtime `dependencies` — it's not an installable package, just a project skeleton with dev tooling.
+
+### Root `.pre-commit-config.yaml` (sketch)
+
+```yaml
+default_language_version:
+  python: python3
+exclude: |
+  (?x)(
+    .venv/|
+    .git/|
+    \{\{ ?cookiecutter\.project_slug ?\}\}/
+  )
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.11.12
+    hooks:
+      - id: uv-lock                                  # keeps uv.lock synced with pyproject.toml
+```
+
+Key differences from the generated config:
+
+- **Excludes `{{ cookiecutter.project_slug }}/`** — the template directory contains Jinja syntax that ruff would mis-parse and pre-commit hooks would mis-format. The bake test exercises that tree; pre-commit shouldn't touch it.
+- **No `uv-export` hooks** — the maintainer has uv; `uv.lock` is enough. No `requirements*.txt` files at root.
+- **Future room for template-specific hooks** — e.g., a smoke-test hook that bakes the template before commit. Lives at root only; doesn't pollute end-user projects.
+
+### Why the symlink goes away
+
+| Concern | Symlink | Two independent files |
+|---|---|---|
+| Independent evolution | ❌ | ✅ |
+| Cross-platform sanity (Windows, fresh clones) | ❌ | ✅ |
+| Honest separation: generated config is a starter, not maintainer state | ❌ | ✅ |
+| Single source of truth | ✅ | (drift mitigated by `test_cookiecutter.py` running ruff on the bake) |
+
+The drift-risk mitigation: after M2, `test_cookiecutter.py` bakes the template and runs `uv run ruff check` against the result. If the generated config is accidentally inconsistent with the generated `pyproject.toml`'s ruff settings, the test catches it.
+
 ## Migration Notes for Existing Users
 
 This is a template repo, so "existing users" means people who previously generated projects from older versions. There is no migration path — already-generated projects keep their pipenv/black/etc setup. The maintainer may consider tagging the last pre-modernization commit (e.g., `v0.x` or `pre-uv`) so users who want the old behavior can still pin to it.
@@ -346,6 +467,9 @@ The new template is a clean break, not a migration tool.
 - **CI:** none.
 - **`git init` default branch:** force `main`.
 - **`LOG_LEVEL` env loading:** route through `environs` for consistency.
+- **Maintainer-side modernization:** yes — root migrates to uv + ruff in lockstep with generated tree.
+- **`.pre-commit-config.yaml` symlink:** removed in M2; replaced with two independent files.
+- **`uv-export` hooks at root:** no — `uv.lock` is sufficient for a uv-using maintainer; no `requirements*.txt` at root.
 
 ## Risks
 
