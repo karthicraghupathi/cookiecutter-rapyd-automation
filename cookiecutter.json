@@ -1,6 +1,9 @@
 {
-    "python_version": "3.10",
+    "python_version": ["3.12", "3.10", "3.11", "3.13"],
     "project_name": "Python Boilerplate",
     "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_').replace('-', '_') }}",
-    "project_description": "Python Boilerplate contains all the boilerplate you need to create a Python package."
+    "project_description": "A Python automation project.",
+    "author_name": "Your Name",
+    "author_email": "you@example.com",
+    "license": ["MIT", "Apache-2.0", "BSD-3-Clause", "Proprietary"]
 }
