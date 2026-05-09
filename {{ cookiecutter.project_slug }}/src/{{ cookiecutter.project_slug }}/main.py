@@ -1,13 +1,9 @@
-#!/usr/bin/env python
-
-import settings
-from settings import logger
+from .settings import PROJECT_NAME, logger
 
 
-def main():
-    pass
+def main() -> None:
+    logger.info("Running %s", PROJECT_NAME)
 
 
 if __name__ == "__main__":
-    logger.info(f"Running {settings.PROJECT_NAME}")
     main()
