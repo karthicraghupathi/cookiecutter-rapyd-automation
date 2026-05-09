@@ -1,31 +1,24 @@
 import logging
-import os
 import sys
 from logging.config import dictConfig
 from pathlib import Path
 
 from environs import env
 
-# Load environment variables from the .env file
 env.read_env()
 
-
-# Setup default variables
 PROJECT_NAME = "{{ cookiecutter.project_name }}"
 PROJECT_SLUG = "{{ cookiecutter.project_slug }}"
-PROJECT_DIR = Path(__file__).parent.parent.resolve()
+PROJECT_DIR = Path(__file__).resolve().parents[2]
 
 
-# Logging setup
-
-
-# Setup logging filters
 class ExcludeErrorFilter(logging.Filter):
+    """Filter that drops records at ERROR level or above."""
+
     def filter(self, record: logging.LogRecord) -> bool:
         return record.levelno < logging.ERROR
 
 
-# Configure logging
 dictConfig(
     {
         "version": 1,
@@ -37,7 +30,7 @@ dictConfig(
         "handlers": {
             "console_stdout": {
                 "formatter": "simple",
-                "level": os.environ.get("LOG_LEVEL", "INFO"),
+                "level": env.str("LOG_LEVEL", "INFO"),
                 "class": "logging.StreamHandler",
                 "stream": sys.stdout,
                 "filters": ["exclude_error"],
@@ -57,19 +50,18 @@ dictConfig(
         },
     }
 )
-logger = logging.getLogger(f"{PROJECT_SLUG}.{__name__}")
+logger = logging.getLogger(__name__)
 
 
-# Define the exception handler for unhandled exceptions
 def handle_exception(exctype, value, traceback):
-    """Sends unhandled exceptions to logging mechanism."""
-    # ignore KeyboardInterrupt so a console python program can exit with ctrl + c
+    """Route uncaught exceptions through logging.
+
+    KeyboardInterrupt is preserved so console programs exit cleanly on Ctrl+C.
+    """
     if issubclass(exctype, KeyboardInterrupt):
         sys.__excepthook__(exctype, value, traceback)
         return
-    # rely entirely on python's logging module for formatting the exception
     logger.critical("Uncaught exception", exc_info=(exctype, value, traceback))
 
 
-# Hook up the exception handler
 sys.excepthook = handle_exception
