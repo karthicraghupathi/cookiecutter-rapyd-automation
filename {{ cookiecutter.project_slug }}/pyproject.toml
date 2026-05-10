@@ -16,8 +16,10 @@ line-length = 88
 target-version = "py{{ cookiecutter.python_version.replace('.', '') }}"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "UP"]
-ignore = ["E501"]
+select = ["E", "F", "W", "I", "B", "UP", "S"]
+# E501: line length (handled by formatter)
+# S101: assert in tests is fine
+ignore = ["E501", "S101"]
 
 [tool.ruff.format]
 # Black-compatible defaults
