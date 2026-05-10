@@ -199,6 +199,25 @@ def test_invalid_email_rejected(cookies):
     assert result.exit_code != 0
 
 
+def test_email_with_quote_rejected(cookies):
+    """Email regex must reject quotes/backslashes in local part.
+
+    The looser regex (only excluding @ and whitespace) would have accepted
+    these and let them flow into the generated TOML — defense-in-depth
+    via |tojson handles it now, but we still want a clear UX error.
+    """
+    result = cookies.bake(extra_context={"author_email": 'b"d@example.com'})
+
+    assert result.exit_code != 0
+
+
+def test_quoted_project_name_rejected(cookies):
+    """project_name flows into multiple files; reject TOML-unsafe chars."""
+    result = cookies.bake(extra_context={"project_name": 'Bad"Name'})
+
+    assert result.exit_code != 0
+
+
 def test_non_ascii_author_renders(cookies):
     """Non-ASCII author names should work — only TOML-unsafe chars are blocked."""
     result = cookies.bake(extra_context={"author_name": "Café Owner"})

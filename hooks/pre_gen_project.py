@@ -2,15 +2,20 @@
 
 Runs after prompts are answered, before the template tree is rendered.
 Validates user-supplied values to fail fast with a clear message instead
-of producing a broken project.
+of producing a broken project. Templated values are rendered into this
+file via Jinja's `|tojson` filter, which makes the hook itself robust to
+weird input even before validation runs.
 
 Validations:
 - `project_slug` must be a valid Python identifier (so the package is
-  importable) and not a reserved keyword.
-- `author_name` and `project_description` must not contain characters
-  that would break the generated `pyproject.toml` (quotes, backslashes,
-  newlines).
-- `author_email` must look like a basic email.
+  importable as `python -m <slug>`) and not a Python reserved keyword.
+- `project_name`, `author_name`, and `project_description` must not
+  contain characters that would surprise downstream consumers
+  (quotes, backslashes, control chars). Note: rendering uses `|tojson`
+  so these CAN'T break Python/TOML parsing — this validation is for
+  UX (surface a clear error rather than render an ugly LICENSE).
+- `author_email` must match a practical email regex (no quotes,
+  backslashes, or other oddities in the local part).
 """
 
 from __future__ import annotations
@@ -29,8 +34,13 @@ AUTHOR_NAME = {{cookiecutter.author_name | tojson}}
 AUTHOR_EMAIL = {{cookiecutter.author_email | tojson}}
 PROJECT_DESCRIPTION = {{cookiecutter.project_description | tojson}}
 
-EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-TOML_UNSAFE = ('"', "\\", "\n", "\r")
+# Standard practical email pattern. Disallows quotes, backslashes, and
+# whitespace anywhere; requires a TLD of 2+ ASCII letters.
+EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
+
+# Characters that produce confusing or broken output in generated files.
+# Even with |tojson rendering, we still surface these as user-facing errors.
+UNSAFE_CHARS = ('"', "\\", "\n", "\r", "\t", "\x00")
 
 
 def fail(message: str) -> None:
@@ -53,13 +63,13 @@ def validate_slug() -> None:
         )
 
 
-def validate_toml_safe(field: str, value: str) -> None:
-    for ch in TOML_UNSAFE:
+def validate_no_unsafe_chars(field: str, value: str) -> None:
+    for ch in UNSAFE_CHARS:
         if ch in value:
-            label = repr(ch) if ch != "\n" else "newline"
+            label = {"\n": "newline", "\r": "carriage return", "\t": "tab", "\x00": "null byte"}.get(ch, repr(ch))
             fail(
-                f"{field}={value!r} contains {label}, which would break the "
-                "generated pyproject.toml. Remove the offending character."
+                f"{field}={value!r} contains {label}, which produces broken or "
+                "confusing output in generated files. Remove the offending character."
             )
 
 
@@ -67,14 +77,16 @@ def validate_email() -> None:
     if not EMAIL_RE.match(AUTHOR_EMAIL):
         fail(
             f"author_email={AUTHOR_EMAIL!r} doesn't look like an email "
-            "address (expected user@host.tld)."
+            "address (expected user@host.tld; quotes/backslashes/spaces "
+            "are not allowed)."
         )
 
 
 def main() -> None:
     validate_slug()
-    validate_toml_safe("author_name", AUTHOR_NAME)
-    validate_toml_safe("project_description", PROJECT_DESCRIPTION)
+    validate_no_unsafe_chars("project_name", PROJECT_NAME)
+    validate_no_unsafe_chars("author_name", AUTHOR_NAME)
+    validate_no_unsafe_chars("project_description", PROJECT_DESCRIPTION)
     validate_email()
 
 
