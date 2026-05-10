@@ -11,6 +11,17 @@ PROJECT_NAME = "{{ cookiecutter.project_name }}"
 PROJECT_SLUG = "{{ cookiecutter.project_slug }}"
 PROJECT_DIR = Path(__file__).resolve().parents[2]
 
+VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+_RAW_LOG_LEVEL = env.str("LOG_LEVEL", "INFO").upper()
+if _RAW_LOG_LEVEL not in VALID_LOG_LEVELS:
+    print(
+        f"[settings] LOG_LEVEL={_RAW_LOG_LEVEL!r} is not one of {sorted(VALID_LOG_LEVELS)}; "
+        "falling back to INFO.",
+        file=sys.stderr,
+    )
+    _RAW_LOG_LEVEL = "INFO"
+LOG_LEVEL = _RAW_LOG_LEVEL
+
 
 class ExcludeErrorFilter(logging.Filter):
     """Filter that drops records at ERROR level or above."""
@@ -30,7 +41,7 @@ dictConfig(
         "handlers": {
             "console_stdout": {
                 "formatter": "simple",
-                "level": env.str("LOG_LEVEL", "INFO"),
+                "level": LOG_LEVEL,
                 "class": "logging.StreamHandler",
                 "stream": sys.stdout,
                 "filters": ["exclude_error"],
