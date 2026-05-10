@@ -1,21 +1,29 @@
-[tool.black]
-include = '\.pyi?$'
-exclude = '''
-/(
-  \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-)/
-'''
+[project]
+name = "{{ cookiecutter.project_slug }}"
+version = "0.1.0"
+description = {{ cookiecutter.project_description | tojson }}
+requires-python = ">={{ cookiecutter.python_version }}"
+authors = [
+    {name = {{ cookiecutter.author_name | tojson }}, email = {{ cookiecutter.author_email | tojson }}}
+]
+dependencies = ["environs"]
 
-[tool.isort]
-profile = "black"
-known_first_party = ["{{ cookiecutter.project_slug }}"]
-default_section = "THIRDPARTY"
-sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+[dependency-groups]
+dev = ["pre-commit", "pytest", "ruff"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py{{ cookiecutter.python_version.replace('.', '') }}"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S"]
+# E501: line length (handled by formatter)
+# S101: assert in tests is fine
+ignore = ["E501", "S101"]
+
+[tool.ruff.format]
+# Black-compatible defaults
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

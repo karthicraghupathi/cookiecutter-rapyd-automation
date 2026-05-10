@@ -1,18 +1,52 @@
-[tool.black]
-include = '\.pyi?$'
-exclude = '''
-/(
-  \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-)/
-'''
+[project]
+name = "cookiecutter-rapyd-automation"
+version = "1.0.0"
+description = "Cookiecutter template for a Python automation project."
+requires-python = ">=3.10"
+authors = [{name = "Karthic Raghupathi"}]
+dependencies = []
 
-[tool.isort]
-profile = "black"
+[dependency-groups]
+dev = [
+    "cookiecutter",
+    "pytest",
+    "pytest-cookies",
+    "ruff",
+    "pre-commit",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+# Excluded from ruff because they contain pre-render Jinja syntax:
+# - The template directory ({{ cookiecutter.project_slug }}/) — file contents.
+# - hooks/ — hook scripts use unquoted Jinja for safe value rendering via
+#   |tojson, which is invalid Python until cookiecutter substitutes.
+# The brace-escape ([{][{]...) sidesteps ruff's glob alternation parser.
+extend-exclude = [
+    "[{][{] cookiecutter.project_slug [}][}]",
+    "hooks",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S"]
+# E501: line length (handled by formatter)
+# S101: assert in tests is fine
+# S607: PATH lookup of `git`/`uv` in the post-gen hook is intentional
+#       (we want to use the user's uv/git, not a vendored absolute path)
+# Note: S603 (subprocess with untrusted input) is NOT globally ignored —
+# we scope it per-file/per-line so a future genuinely-risky subprocess
+# call doesn't get masked.
+ignore = ["E501", "S101", "S607"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests routinely use subprocess.run with capture_output=True without shell;
+# all S subprocess rules in tests are noise.
+"test_*.py" = ["S404", "S603", "S607"]
+
+[tool.pytest.ini_options]
+testpaths = ["test_cookiecutter.py"]
+python_files = ["test_*.py"]
+# Don't recurse into the cookiecutter template directory; its tests/ contains
+# Jinja syntax that pytest can't import.
+norecursedirs = ["{{*"]
