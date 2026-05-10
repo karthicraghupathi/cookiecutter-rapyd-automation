@@ -22,7 +22,7 @@ Tests bake the template into a temp directory and assert the generated project l
 ## Adding a license option
 
 1. Add the license name (e.g., `"GPL-3.0"`) to the `license` list in `cookiecutter.json`.
-2. Drop a matching template file at `hooks/licenses/GPL-3.0.txt` containing `{author_name}` and `{current_year}` placeholders.
+2. Drop a matching template file at `{{ cookiecutter.project_slug }}/.licenses/GPL-3.0.txt` containing `{author_name}` and `{current_year}` placeholders. (`_copy_without_render` already covers `.licenses/*` so Jinja won't touch it.)
 3. Add a test case to `test_license_choice_renders` in `test_cookiecutter.py`.
 
 ## Release process

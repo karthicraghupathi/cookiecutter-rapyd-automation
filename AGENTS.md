@@ -17,7 +17,7 @@ The two `.pre-commit-config.yaml` files (root + inside the template dir) are int
 
 - Prompts live in `cookiecutter.json` (lists become choice prompts; first item is the default).
 - The post-generation hook is `hooks/post_gen_project.py` (cross-platform Python).
-- License templates live at `hooks/licenses/<choice>.txt`; the hook substitutes `{author_name}` and `{current_year}`.
+- License templates live in the rendered tree at `{{ cookiecutter.project_slug }}/.licenses/<choice>.txt` and are marked `_copy_without_render` in `cookiecutter.json` so Jinja skips them. The post-gen hook reads the chosen template, substitutes `{author_name}` and `{current_year}`, writes `LICENSE`, then removes the `.licenses/` staging directory.
 - Files matched by `_copy_without_render` skip Jinja substitution.
 
 ## Verification commands
