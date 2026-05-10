@@ -24,6 +24,9 @@ EXPECTED_FILES = [
     "Makefile",
     "pyproject.toml",
     "README.md",
+    "requirements.txt",
+    "requirements-dev.txt",
+    "uv.lock",
     "src/python_boilerplate/__init__.py",
     "src/python_boilerplate/__main__.py",
     "src/python_boilerplate/main.py",
@@ -157,3 +160,91 @@ def test_post_gen_hook_requires_uv(tmp_path):
 
     assert proc.returncode != 0
     assert "uv" in proc.stderr.lower()
+
+
+# --- Validation tests (pre-gen hook) -----------------------------------------
+
+
+def test_invalid_slug_rejected(cookies):
+    """A project_name that produces a non-identifier slug fails fast."""
+    result = cookies.bake(extra_context={"project_name": "1bad start"})
+
+    # Slug becomes "1bad_start" — invalid Python identifier (leading digit).
+    assert result.exit_code != 0
+
+
+def test_python_keyword_slug_rejected(cookies):
+    """A slug equal to a Python reserved keyword is rejected."""
+    result = cookies.bake(extra_context={"project_slug": "class"})
+
+    assert result.exit_code != 0
+
+
+def test_author_with_double_quote_rejected(cookies):
+    """Quotes in author_name would break the generated pyproject.toml."""
+    result = cookies.bake(extra_context={"author_name": 'Bad"Name'})
+
+    assert result.exit_code != 0
+
+
+def test_author_with_newline_rejected(cookies):
+    result = cookies.bake(extra_context={"author_name": "Line\nTwo"})
+
+    assert result.exit_code != 0
+
+
+def test_invalid_email_rejected(cookies):
+    result = cookies.bake(extra_context={"author_email": "not-an-email"})
+
+    assert result.exit_code != 0
+
+
+def test_non_ascii_author_renders(cookies):
+    """Non-ASCII author names should work — only TOML-unsafe chars are blocked."""
+    result = cookies.bake(extra_context={"author_name": "Café Owner"})
+
+    assert result.exit_code == 0
+    license_text = (result.project_path / "LICENSE").read_text(encoding="utf-8")
+    assert "Café Owner" in license_text
+
+
+# --- Generated requirements files --------------------------------------------
+
+
+def test_requirements_files_have_content(cookies):
+    """Both requirements files exist and are non-empty after the bake.
+
+    The post-gen hook runs `uv-export` via pre-commit, which writes the files.
+    `requirements-dev.txt` (prod + dev) is a strict superset of `requirements.txt`
+    (prod only).
+    """
+    result = cookies.bake()
+
+    req = (result.project_path / "requirements.txt").read_text()
+    req_dev = (result.project_path / "requirements-dev.txt").read_text()
+
+    # Both should at minimum mention environs (the only runtime dep).
+    assert "environs" in req
+    assert "environs" in req_dev
+    # Dev superset: pytest is a dev dep, must be in requirements-dev.txt only.
+    assert "pytest" in req_dev
+    assert "pytest" not in req
+
+
+# --- License resolution ------------------------------------------------------
+
+
+def test_unknown_license_fails(cookies):
+    """A license value not in the choice list (and missing template) fails."""
+    result = cookies.bake(extra_context={"license": "GPL-3.0"})
+
+    # No GPL-3.0.txt exists in .licenses/, so render_license() should fail
+    # with a friendly message.
+    assert result.exit_code != 0
+
+
+def test_licenses_staging_dir_removed(cookies):
+    """The .licenses/ staging directory is cleaned up by the post-gen hook."""
+    result = cookies.bake()
+
+    assert not (result.project_path / ".licenses").exists()
