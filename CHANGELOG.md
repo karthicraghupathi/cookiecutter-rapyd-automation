@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file. Format foll
 ## [Unreleased]
 
 ### Added
+- Pre-generation hook (`hooks/pre_gen_project.py`) that fails fast on invalid `project_slug` (non-identifier or Python keyword), TOML-unsafe characters in `author_name` / `project_description`, and malformed `author_email`.
+- Ruff `S` (bandit) security rules enabled with targeted ignores in both root and generated configs.
+- Test coverage expanded from 15 to 24 tests: invalid slug rejection, Python-keyword slug rejection, quote/newline-in-author rejection, malformed email rejection, non-ASCII author rendering, `requirements.txt` / `requirements-dev.txt` content assertions, unknown-license failure, `.licenses/` staging cleanup verification.
+- `LOG_LEVEL` validation in generated `settings.py` — invalid values fall back to INFO with a warning printed to stderr.
 - AGENTS.md at repo root and inside generated projects.
 - CONTRIBUTING.md and CHANGELOG.md.
 - Generated `.env.example` documenting `LOG_LEVEL`.
@@ -35,6 +39,10 @@ All notable changes to this project will be documented in this file. Format foll
 - Static generated `LICENSE` (now rendered by the post-gen hook from the chosen license template, with current year and author auto-filled).
 
 ### Fixed
+- Post-gen hook now uses `try/finally` to clean up `.licenses/` staging dir on all paths (was leaked on failure).
+- Post-gen hook distinguishes pre-commit auto-fix from real hook failure via a second pass; only emits the "auto-fixed" message when the second pass is clean.
+- Doc/code mismatch: `AGENTS.md` and `CONTRIBUTING.md` previously referenced `hooks/licenses/`; now correctly point to the rendered-tree `.licenses/` location.
+- Pre-commit hook revisions bumped: `pre-commit-hooks` v5.0.0→v6.0.0, `ruff-pre-commit` v0.7.4→v0.15.12. New ruff hook IDs (`ruff-check` instead of legacy `ruff` alias).
 - Generated projects no longer silently inherit maintainer-side pre-commit state via the now-removed symlink.
 - `LOG_LEVEL` is now read via `environs.env.str` for consistency with the rest of the settings module (was `os.environ.get`).
 - `setup_env.sh` (which was never invoked by the post-gen hook) is gone; `.env.example` ships in its place and is copied to `.env` automatically by the post-gen hook.
