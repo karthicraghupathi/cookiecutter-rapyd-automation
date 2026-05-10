@@ -42,22 +42,26 @@ def render_license() -> None:
     License templates ship inside the rendered project at `.licenses/`
     (marked `_copy_without_render` in cookiecutter.json so Jinja skips them).
     The hook reads the chosen template, renders it, writes LICENSE, then
-    removes the `.licenses/` staging directory.
+    removes the `.licenses/` staging directory. Cleanup runs unconditionally
+    via `try/finally` so a partial failure doesn't leave staging files behind.
     """
     licenses_dir = PROJECT_DIR / ".licenses"
     license_file = licenses_dir / f"{LICENSE_CHOICE}.txt"
 
-    if not license_file.exists():
-        fail(f"License template not found: {license_file}")
+    try:
+        if not license_file.exists():
+            fail(f"License template not found: {license_file}")
 
-    template = license_file.read_text(encoding="utf-8")
-    rendered = template.format(
-        author_name=AUTHOR_NAME,
-        current_year=datetime.now().year,
-    )
-    (PROJECT_DIR / "LICENSE").write_text(rendered, encoding="utf-8")
-    shutil.rmtree(licenses_dir)
-    info(f"Wrote LICENSE ({LICENSE_CHOICE})")
+        template = license_file.read_text(encoding="utf-8")
+        rendered = template.format(
+            author_name=AUTHOR_NAME,
+            current_year=datetime.now().year,
+        )
+        (PROJECT_DIR / "LICENSE").write_text(rendered, encoding="utf-8")
+        info(f"Wrote LICENSE ({LICENSE_CHOICE})")
+    finally:
+        if licenses_dir.exists():
+            shutil.rmtree(licenses_dir)
 
 
 def copy_env_example() -> None:
@@ -71,7 +75,45 @@ def copy_env_example() -> None:
 
 def run(cmd: list[str], *, check: bool = True) -> subprocess.CompletedProcess:
     info(f"$ {' '.join(cmd)}")
-    return subprocess.run(cmd, cwd=PROJECT_DIR, check=check)
+    return subprocess.run(cmd, cwd=PROJECT_DIR, check=check)  # noqa: S603
+
+
+def run_pre_commit_with_autofix_handling() -> None:
+    """Run `pre-commit run --all-files` and distinguish auto-fix from real failure.
+
+    Pre-commit exits non-zero whenever a hook modifies files (auto-fix) OR when
+    a hook genuinely fails (e.g., yaml syntax error). To tell them apart, we
+    run a second pass: if the first pass auto-fixed and the second pass passes
+    cleanly, it was a benign auto-fix. If the second pass also fails, we have a
+    real problem and surface it loudly (still non-fatal — the project is usable;
+    the user just needs to fix the hook config).
+    """
+    info("Running pre-commit on all files (best-effort)...")
+    first = run(
+        ["uv", "run", "pre-commit", "run", "--all-files"],
+        check=False,
+    )
+    if first.returncode == 0:
+        return
+
+    info("First pre-commit pass exited non-zero; checking if it was auto-fix...")
+    second = run(
+        ["uv", "run", "pre-commit", "run", "--all-files"],
+        check=False,
+    )
+    if second.returncode == 0:
+        info(
+            "pre-commit auto-fixed some files on the first pass; second pass "
+            "is clean. Review and re-stage before committing."
+        )
+        return
+
+    print(
+        "\033[33m[post-gen hook] pre-commit hooks are still failing after a "
+        "second pass. This is not auto-fix — review hook output above and "
+        "fix the underlying issue before committing.\033[0m",
+        file=sys.stderr,
+    )
 
 
 def main() -> None:
@@ -88,19 +130,7 @@ def main() -> None:
     run(["uv", "sync", "--all-groups"])
     run(["git", "add", "."])
     run(["uv", "run", "pre-commit", "install"])
-
-    # Best-effort: run hooks once. Don't fail the whole hook if a hook
-    # auto-fixes files (which exits non-zero by design).
-    info("Running pre-commit on all files (best-effort)...")
-    result = run(
-        ["uv", "run", "pre-commit", "run", "--all-files"],
-        check=False,
-    )
-    if result.returncode != 0:
-        info(
-            "pre-commit auto-fixed some files. "
-            "Review and re-stage before committing."
-        )
+    run_pre_commit_with_autofix_handling()
 
     info(f"Project ready at {PROJECT_DIR}")
 
