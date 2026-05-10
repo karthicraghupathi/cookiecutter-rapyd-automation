@@ -32,14 +32,17 @@ extend-exclude = [
 select = ["E", "F", "W", "I", "B", "UP", "S"]
 # E501: line length (handled by formatter)
 # S101: assert in tests is fine
-# S603: subprocess with list args + check=True is the safe pattern we use
-# S607: PATH lookup of `git`/`uv`/`python` in the post-gen hook is intentional
-ignore = ["E501", "S101", "S603", "S607"]
+# S607: PATH lookup of `git`/`uv` in the post-gen hook is intentional
+#       (we want to use the user's uv/git, not a vendored absolute path)
+# Note: S603 (subprocess with untrusted input) is NOT globally ignored —
+# we scope it per-file/per-line so a future genuinely-risky subprocess
+# call doesn't get masked.
+ignore = ["E501", "S101", "S607"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests routinely use subprocess.run with capture_output=True without shell;
 # all S subprocess rules in tests are noise.
-"test_*.py" = ["S404", "S607"]
+"test_*.py" = ["S404", "S603", "S607"]
 
 [tool.pytest.ini_options]
 testpaths = ["test_cookiecutter.py"]
