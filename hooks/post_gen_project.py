@@ -17,8 +17,10 @@ from datetime import datetime
 from pathlib import Path
 
 PROJECT_DIR = Path.cwd()
-AUTHOR_NAME = "{{ cookiecutter.author_name }}"
-LICENSE_CHOICE = "{{ cookiecutter.license }}"
+# Render via Jinja's |tojson so quote/newline-containing input can't break
+# the hook's Python parsing before pre-gen validation has a chance to run.
+AUTHOR_NAME = {{cookiecutter.author_name | tojson}}
+LICENSE_CHOICE = {{cookiecutter.license | tojson}}
 
 
 def fail(message: str) -> None:

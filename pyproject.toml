@@ -18,11 +18,14 @@ dev = [
 [tool.ruff]
 line-length = 88
 target-version = "py310"
-# The template directory ({{ cookiecutter.project_slug }}) contains Jinja syntax
-# that ruff would mis-parse. We exclude it via a literal path, escaping the
-# braces so ruff's glob parser doesn't treat them as alternation.
+# Excluded from ruff because they contain pre-render Jinja syntax:
+# - The template directory ({{ cookiecutter.project_slug }}/) — file contents.
+# - hooks/ — hook scripts use unquoted Jinja for safe value rendering via
+#   |tojson, which is invalid Python until cookiecutter substitutes.
+# The brace-escape ([{][{]...) sidesteps ruff's glob alternation parser.
 extend-exclude = [
     "[{][{] cookiecutter.project_slug [}][}]",
+    "hooks",
 ]
 
 [tool.ruff.lint]

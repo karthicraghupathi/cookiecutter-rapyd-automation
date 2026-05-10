@@ -7,8 +7,8 @@ from environs import env
 
 env.read_env()
 
-PROJECT_NAME = "{{ cookiecutter.project_name }}"
-PROJECT_SLUG = "{{ cookiecutter.project_slug }}"
+PROJECT_NAME = {{ cookiecutter.project_name | tojson }}
+PROJECT_SLUG = {{ cookiecutter.project_slug | tojson }}
 PROJECT_DIR = Path(__file__).resolve().parents[2]
 
 VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}

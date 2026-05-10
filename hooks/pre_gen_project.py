@@ -19,10 +19,15 @@ import keyword
 import re
 import sys
 
-PROJECT_SLUG = "{{ cookiecutter.project_slug }}"
-AUTHOR_NAME = "{{ cookiecutter.author_name }}"
-AUTHOR_EMAIL = "{{ cookiecutter.author_email }}"
-PROJECT_DESCRIPTION = "{{ cookiecutter.project_description }}"
+# Templated values are rendered via Jinja's `|tojson` filter so that any
+# quote, backslash, or newline in user input is safely escaped at template
+# expansion time. This makes the hook itself robust to weird input, even
+# before our validation logic runs.
+PROJECT_SLUG = {{cookiecutter.project_slug | tojson}}
+PROJECT_NAME = {{cookiecutter.project_name | tojson}}
+AUTHOR_NAME = {{cookiecutter.author_name | tojson}}
+AUTHOR_EMAIL = {{cookiecutter.author_email | tojson}}
+PROJECT_DESCRIPTION = {{cookiecutter.project_description | tojson}}
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 TOML_UNSAFE = ('"', "\\", "\n", "\r")
