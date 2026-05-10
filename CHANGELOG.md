@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file. Format foll
 ### Added
 - Pre-generation hook (`hooks/pre_gen_project.py`) that fails fast on invalid `project_slug` (non-identifier or Python keyword), TOML-unsafe characters in `author_name` / `project_description`, and malformed `author_email`.
 - Ruff `S` (bandit) security rules enabled with targeted ignores in both root and generated configs.
-- Test coverage expanded from 15 to 24 tests: invalid slug rejection, Python-keyword slug rejection, quote/newline-in-author rejection, malformed email rejection, non-ASCII author rendering, `requirements.txt` / `requirements-dev.txt` content assertions, unknown-license failure, `.licenses/` staging cleanup verification.
+- Test coverage expanded from 15 to 26 tests: invalid slug rejection, Python-keyword slug rejection, quote/newline-in-author rejection, malformed email rejection, quote-in-email rejection, quote-in-project_name rejection, non-ASCII author rendering, `requirements.txt` / `requirements-dev.txt` content assertions, unknown-license failure, `.licenses/` staging cleanup verification.
 - `LOG_LEVEL` validation in generated `settings.py` — invalid values fall back to INFO with a warning printed to stderr.
 - AGENTS.md at repo root and inside generated projects.
 - CONTRIBUTING.md and CHANGELOG.md.
@@ -39,6 +39,11 @@ All notable changes to this project will be documented in this file. Format foll
 - Static generated `LICENSE` (now rendered by the post-gen hook from the chosen license template, with current year and author auto-filled).
 
 ### Fixed
+- Templated values in hook scripts and generated `pyproject.toml`/`settings.py`/`test_smoke.py` are now rendered via Jinja's `|tojson` filter. This makes the hook itself robust to weird input (quotes, newlines, control chars) even before validation runs, so quote-containing values can no longer break Python parsing of the hook script before the validator can reject them.
+- Tightened `author_email` validation: practical email regex (no quotes, backslashes, or whitespace anywhere). The previous loose regex permitted `b"d@example.com`-style values.
+- Extended pre-gen validation to cover `project_name` (flows into `settings.py`, `__init__.py` docstring, smoke tests) and `author_email` (flows into TOML).
+- Extended `UNSAFE_CHARS` set to also catch tab and null byte, with friendly per-character labels in the error message.
+- Scoped `ruff S603` ignore from global to per-line (`# noqa: S603` on the hook's `subprocess.run` helper) and per-file (`test_*.py`). Future genuinely-risky subprocess calls won't be masked by a blanket ignore.
 - Post-gen hook now uses `try/finally` to clean up `.licenses/` staging dir on all paths (was leaked on failure).
 - Post-gen hook distinguishes pre-commit auto-fix from real hook failure via a second pass; only emits the "auto-fixed" message when the second pass is clean.
 - Doc/code mismatch: `AGENTS.md` and `CONTRIBUTING.md` previously referenced `hooks/licenses/`; now correctly point to the rendered-tree `.licenses/` location.
